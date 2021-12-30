@@ -27,40 +27,34 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
+  Manager = await ethers.getContractFactory("Manager");
+  manager = await Manager.deploy()
+  await manager.deployed()
+
+  Crowdsale = await ethers.getContractFactory("Crowdsale");
+
   LASM = await ethers.getContractFactory("LASM");
-  lasm = await LASM.deploy();
-   await lasm.deployed();
+  lasm = await LASM.deploy(manager.address, deployer.address, 1);
+  await lasm.deployed();
+  console.log(lasm.address)
+  let setToken = await manager.setToken(lasm.address)
+  await setToken.wait()
+  let tx = await manager.getToken()
 
-  //  let manager_addr = await lasm.manager_addr()
-  //  console.log(manager_addr)
-
-  NFTCrowdsale = await ethers.getContractFactory("NFTCrowdsale");
-  nftPreSale = await NFTCrowdsale.deploy();
-  await nftPreSale.deployed();
-
-  nftPubSale = await NFTCrowdsale.deploy();
-  await nftPubSale.deployed();
-
- 
-
-   NFT = await ethers.getContractFactory("NFT");
-   nft = await NFT.deploy(nftPreSale.address,nftPubSale.address);
-   await nft.deployed();
+  console.log(tx)
 
   // Manager = await ethers.getContractFactory("Manager");
   // manager = await Manager.attach(manager_addr)
-
+  console.log("nftPreSale deployed to:", manager.address);
   console.log("LASM deployed to:", lasm.address);
-  console.log("nftPreSale deployed to:", nftPreSale.address);
-  console.log("nftPubSale deployed to:", nftPubSale.address);
-  console.log("nft deployed to:", nft.address);
+  
 
   // We also save the contract's artifacts and address in the frontend directory
-  saveFrontendFiles(lasm,nftPreSale,nftPubSale,nft);
+  saveFrontendFiles(lasm,manager);
 }
 //,nftPreSale,nftPubSale,nft
 
-function saveFrontendFiles(lasm,nftPreSale,nftPubSale,nft) {
+function saveFrontendFiles(lasm,manager) {
   const fs = require("fs");
   const contractsDir = __dirname + "/../frontend/src/contracts";
 
@@ -69,9 +63,7 @@ function saveFrontendFiles(lasm,nftPreSale,nftPubSale,nft) {
   }
 let config = `
  const LASM_addr = "${lasm.address}"
- const nftPreSale_addr = "${nftPreSale.address}"
- const nftPubSale_addr = "${nftPubSale.address}"
- const nft_addr = "${nft.address}"
+ const Manager_addr = "${manager.address}"
 `
 let data =  JSON.stringify(config)
 fs.writeFileSync(
@@ -98,8 +90,6 @@ fs.writeFileSync(
   // );
 
   const LasmArtifact = artifacts.readArtifactSync("LASM");
-  const nftPreSaleArtifact = artifacts.readArtifactSync("NFTCrowdsale");
-  const nftArtifact = artifacts.readArtifactSync("NFT");
   const managerArtifact = artifacts.readArtifactSync("Manager");
   const CrowdsaleArtifact = artifacts.readArtifactSync("Crowdsale");
 
@@ -113,23 +103,7 @@ fs.writeFileSync(
     
   );
 
-  abi  = `const NFTCrowdsale  = ${JSON.stringify(nftPreSaleArtifact)}`
 
-  data = JSON.stringify(abi,null,2)
-
-  fs.writeFileSync(
-    contractsDir + '/NFTCrowdsale.js', JSON.parse(data)
-    
-  );
-
-  abi  = `const NFT  = ${JSON.stringify(nftArtifact)}`
-
-  data = JSON.stringify(abi,null,2)
-
-  fs.writeFileSync(
-    contractsDir + '/NFT.js', JSON.parse(data)
-    
-  );
   abi  = `const Manager  = ${JSON.stringify(managerArtifact)}`
 
   data = JSON.stringify(abi,null,2)
@@ -145,8 +119,8 @@ fs.writeFileSync(
   fs.writeFileSync(
     contractsDir + '/Crowdsale.js', JSON.parse(data)
     
-  );
 
+    );
   // fs.writeFileSync(
   //   contractsDir + "/LASM.json",
   //   JSON.stringify(LasmArtifact, null, 2)
